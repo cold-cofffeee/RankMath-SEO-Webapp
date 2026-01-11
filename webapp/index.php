@@ -157,7 +157,7 @@
                     <div class="card">
                         <h3>Analytics Dashboard</h3>
                         <div id="analytics-dashboard">
-                            <p class="text-muted">Loading analytics...</p>
+                            <p class="text-muted">No analytics data available yet. Import from Google Search Console or add data manually.</p>
                         </div>
                     </div>
                 </div>
@@ -192,7 +192,9 @@
                     <div class="card">
                         <h3>Local SEO Locations</h3>
                         <button class="btn btn-primary" onclick="showAddLocationForm()">Add New Location</button>
-                        <div id="locations-list" class="list-area"></div>
+                        <div id="locations-list" class="list-area">
+                            <p class="text-muted">No locations added yet.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -232,7 +234,9 @@
                         <h3>404 Error Monitor</h3>
                         <button class="btn btn-secondary" onclick="load404Logs()">Refresh</button>
                         <button class="btn btn-danger" onclick="clear404Logs()">Clear All</button>
-                        <div id="404-logs" class="list-area"></div>
+                        <div id="404-logs" class="list-area">
+                            <p class="text-muted">No 404 errors logged yet.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -241,7 +245,9 @@
                     <div class="card">
                         <h3>URL Redirections</h3>
                         <button class="btn btn-primary" onclick="showAddRedirectionForm()">Add Redirection</button>
-                        <div id="redirections-list" class="list-area"></div>
+                        <div id="redirections-list" class="list-area">
+                            <p class="text-muted">No redirections configured yet.</p>
+                        </div>
                     </div>
                 </div>
             </div>

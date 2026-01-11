@@ -51,6 +51,11 @@ $router->post('/api/seo-analysis/analyze', 'RankMathWebapp\\Modules\\SeoAnalysis
 $router->get('/api/seo-analysis/history', 'RankMathWebapp\\Modules\\SeoAnalysis\\SeoAnalysisController@getHistory');
 
 // ============================================
+// DASHBOARD ROUTES
+// ============================================
+$router->get('/api/dashboard/stats', 'RankMathWebapp\\Modules\\Analytics\\AnalyticsController@getDashboardStats');
+
+// ============================================
 // ANALYTICS ROUTES
 // ============================================
 $router->get('/api/analytics/dashboard', 'RankMathWebapp\\Modules\\Analytics\\AnalyticsController@getDashboard');

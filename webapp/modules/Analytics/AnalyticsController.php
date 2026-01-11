@@ -18,6 +18,68 @@ class AnalyticsController {
     }
     
     /**
+     * Get dashboard overview stats
+     */
+    public function getDashboardStats($params) {
+        $prefix = $this->db->getPrefix();
+        $startDate = date('Y-m-d', strtotime('-30 days'));
+        $endDate = date('Y-m-d');
+        
+        // Get summary stats
+        $keywordSql = "SELECT 
+                        SUM(impressions) as total_impressions,
+                        SUM(clicks) as total_clicks,
+                        COUNT(DISTINCT keyword) as total_keywords,
+                        AVG(position) as avg_position
+                       FROM {$prefix}analytics_keywords
+                       WHERE date BETWEEN :start_date AND :end_date";
+        
+        $keywordStats = $this->db->fetchOne($keywordSql, [
+            'start_date' => $startDate,
+            'end_date' => $endDate
+        ]);
+        
+        // Get SEO score (average from recent analyses)
+        $seoSql = "SELECT AVG(score) as avg_score
+                   FROM {$prefix}seo_analysis
+                   WHERE analyzed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        
+        $seoStats = $this->db->fetchOne($seoSql, []);
+        
+        // Get recent activity
+        $activitySql = "SELECT 
+                         'SEO Analysis' as type,
+                         url,
+                         score,
+                         analyzed_at as date
+                       FROM {$prefix}seo_analysis
+                       ORDER BY analyzed_at DESC
+                       LIMIT 5";
+        
+        $activities = $this->db->fetchAll($activitySql, []);
+        
+        $recent_activity = [];
+        foreach ($activities as $activity) {
+            $recent_activity[] = "Analyzed {$activity['url']} - Score: {$activity['score']}/100";
+        }
+        
+        if (empty($recent_activity)) {
+            $recent_activity[] = "No recent activity";
+        }
+        
+        $data = [
+            'seo_score' => round($seoStats['avg_score'] ?? 0),
+            'total_keywords' => $keywordStats['total_keywords'] ?? 0,
+            'impressions' => $keywordStats['total_impressions'] ?? 0,
+            'clicks' => $keywordStats['total_clicks'] ?? 0,
+            'avg_position' => round($keywordStats['avg_position'] ?? 0, 1),
+            'recent_activity' => $recent_activity,
+        ];
+        
+        Response::success('Dashboard stats retrieved', $data);
+    }
+    
+    /**
      * Get analytics dashboard data
      */
     public function getDashboard($params) {

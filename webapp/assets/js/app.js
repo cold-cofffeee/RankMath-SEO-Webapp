@@ -42,7 +42,9 @@ function switchView(viewName) {
     document.getElementById('page-title').textContent = titles[viewName];
     
     // Load view-specific data
-    if (viewName === 'analytics') {
+    if (viewName === 'dashboard') {
+        loadDashboard();
+    } else if (viewName === 'analytics') {
         loadAnalytics();
     } else if (viewName === '404-monitor') {
         load404Logs();
@@ -270,6 +272,7 @@ function copyToClipboard(text) {
 // Analytics
 async function loadAnalytics() {
     const dashboardDiv = document.getElementById('analytics-dashboard');
+    dashboardDiv.innerHTML = '<p class="text-muted">Loading analytics data...</p>';
     
     try {
         const response = await fetch(API_BASE + '/api/analytics/dashboard');
@@ -292,21 +295,22 @@ async function loadAnalytics() {
                     `;
                 });
             } else {
-                html += '<p class="text-muted">No keyword data available yet.</p>';
+                html += '<p class="text-muted">No keyword data available yet. <a href="#" onclick="switchView(\'dashboard\')">Run an SEO analysis</a> to get started.</p>';
             }
             
             html += '</div>';
             dashboardDiv.innerHTML = html;
         }
     } catch (error) {
-        dashboardDiv.innerHTML = '<p class="text-muted">Error loading analytics</p>';
+        dashboardDiv.innerHTML = '<p class="text-muted">Error loading analytics. Please try again.</p>';
+        console.error('Analytics error:', error);
     }
 }
 
 // 404 Monitor
 async function load404Logs() {
     const logsDiv = document.getElementById('404-logs');
-    logsDiv.innerHTML = '<p class="text-muted">Loading logs...</p>';
+    logsDiv.innerHTML = '<p class="text-muted">Loading 404 logs...</p>';
     
     try {
         const response = await fetch(API_BASE + '/api/404-monitor/logs');
@@ -316,7 +320,7 @@ async function load404Logs() {
             const logs = result.data.logs;
             
             if (logs.length === 0) {
-                logsDiv.innerHTML = '<p class="text-muted">No 404 errors logged yet.</p>';
+                logsDiv.innerHTML = '<p class="text-muted">No 404 errors logged yet. Great job! 🎉</p>';
                 return;
             }
             
@@ -338,7 +342,8 @@ async function load404Logs() {
             logsDiv.innerHTML = html;
         }
     } catch (error) {
-        logsDiv.innerHTML = '<p class="text-muted">Error loading logs</p>';
+        logsDiv.innerHTML = '<p class="text-muted">Error loading 404 logs. Please try again.</p>';
+        console.error('404 Monitor error:', error);
     }
 }
 
@@ -379,7 +384,7 @@ async function loadRedirections() {
             const redirections = result.data;
             
             if (redirections.length === 0) {
-                listDiv.innerHTML = '<p class="text-muted">No redirections configured yet.</p>';
+                listDiv.innerHTML = '<p class="text-muted">No redirections configured yet. Click "Add Redirection" to create one.</p>';
                 return;
             }
             
@@ -401,7 +406,8 @@ async function loadRedirections() {
             listDiv.innerHTML = html;
         }
     } catch (error) {
-        listDiv.innerHTML = '<p class="text-muted">Error loading redirections</p>';
+        listDiv.innerHTML = '<p class="text-muted">Error loading redirections. Please try again.</p>';
+        console.error('Redirections error:', error);
     }
 }
 
@@ -461,7 +467,7 @@ async function loadLocations() {
             const locations = result.data;
             
             if (locations.length === 0) {
-                listDiv.innerHTML = '<p class="text-muted">No locations added yet.</p>';
+                listDiv.innerHTML = '<p class="text-muted">No locations added yet. Click "Add New Location" to get started.</p>';
                 return;
             }
             
@@ -483,7 +489,8 @@ async function loadLocations() {
             listDiv.innerHTML = html;
         }
     } catch (error) {
-        listDiv.innerHTML = '<p class="text-muted">Error loading locations</p>';
+        listDiv.innerHTML = '<p class="text-muted">Error loading locations. Please try again.</p>';
+        console.error('Locations error:', error);
     }
 }
 
@@ -601,5 +608,37 @@ document.getElementById('sitemap-crawl-form').addEventListener('submit', async (
     }
 });
 
+// Dashboard
+async function loadDashboard() {
+    try {
+        const response = await fetch(API_BASE + '/api/dashboard/stats');
+        const result = await response.json();
+        
+        if (result.success) {
+            const stats = result.data;
+            
+            // Update stat cards
+            const statValues = document.querySelectorAll('.stat-value');
+            if (statValues[0]) statValues[0].textContent = stats.seo_score || 'N/A';
+            if (statValues[1]) statValues[1].textContent = (stats.total_keywords || 0).toLocaleString();
+            if (statValues[2]) statValues[2].textContent = (stats.impressions || 0).toLocaleString();
+            if (statValues[3]) statValues[3].textContent = (stats.clicks || 0).toLocaleString();
+            
+            // Update recent activity
+            const activityDiv = document.getElementById('recent-activity');
+            if (stats.recent_activity && stats.recent_activity.length > 0) {
+                let html = '';
+                stats.recent_activity.forEach(activity => {
+                    html += `<p class="text-muted" style="margin: 5px 0;">${activity}</p>`;
+                });
+                activityDiv.innerHTML = html;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load dashboard:', error);
+    }
+}
+
 // Init
+loadDashboard();
 console.log('RankMath SEO Webapp initialized');

@@ -1,8 +1,7 @@
 <?php
 /**
  * Database Configuration
- * 
- * Update these values to match your MySQL/MariaDB setup
+ * Generated during installation
  */
 
 return [
@@ -15,7 +14,6 @@ return [
     'collation' => 'utf8mb4_unicode_ci',
     'prefix' => 'rm_',
     
-    // Connection options
     'options' => [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
