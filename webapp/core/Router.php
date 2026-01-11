@@ -46,6 +46,16 @@ class Router {
         if (strpos($path, $basePath) === 0) {
             $path = substr($path, strlen($basePath));
         }
+        
+        // Remove /api.php from path if present
+        if (strpos($path, '/api.php') === 0) {
+            $path = substr($path, strlen('/api.php'));
+        }
+        
+        // Ensure path starts with /
+        if (empty($path) || $path[0] !== '/') {
+            $path = '/' . $path;
+        }
 
         // Apply middleware
         foreach ($this->middleware as $mw) {

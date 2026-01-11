@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test - RankMath</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        .test-section { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        button { background: #0066cc; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0052a3; }
+        pre { background: #fff; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>RankMath API Tester</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Health Check</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <pre id="health-result">Click button to test...</pre>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Dashboard Stats</h3>
+        <button onclick="testDashboard()">Test Dashboard Endpoint</button>
+        <pre id="dashboard-result">Click button to test...</pre>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: SEO Analysis</h3>
+        <input type="text" id="test-url" placeholder="Enter URL to test" style="width: 400px; padding: 8px;" value="https://example.com">
+        <button onclick="testSeoAnalysis()">Test SEO Analysis</button>
+        <pre id="seo-result">Click button to test...</pre>
+    </div>
+    
+    <script>
+        const API_BASE = '/rankmath/webapp/api.php';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(API_BASE + '/api/health');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `<span class="success">✓ Success!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">✗ Error:</span>\n${error.message}`;
+            }
+        }
+        
+        async function testDashboard() {
+            const resultDiv = document.getElementById('dashboard-result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(API_BASE + '/api/dashboard/stats');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `<span class="success">✓ Success!</span>\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">✗ Error:</span>\n${error.message}`;
+            }
+        }
+        
+        async function testSeoAnalysis() {
+            const resultDiv = document.getElementById('seo-result');
+            const url = document.getElementById('test-url').value;
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                const response = await fetch(API_BASE + '/api/seo-analysis/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        is_competitor: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `<span class="success">✓ Success!</span>\nScore: ${data.data.score}/100\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">✗ Error:</span>\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">✗ Error:</span>\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

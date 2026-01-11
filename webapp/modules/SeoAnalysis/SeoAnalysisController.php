@@ -21,9 +21,12 @@ class SeoAnalysisController {
      * Analyze a URL for SEO factors
      */
     public function analyze($params) {
-        $url = $_POST['url'] ?? '';
-        $projectId = $_POST['project_id'] ?? null;
-        $isCompetitor = $_POST['is_competitor'] ?? false;
+        // Read JSON input
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        $url = $input['url'] ?? '';
+        $projectId = $input['project_id'] ?? null;
+        $isCompetitor = $input['is_competitor'] ?? false;
         
         if (empty($url)) {
             Response::error('URL is required');
