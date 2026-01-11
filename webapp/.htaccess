@@ -1,6 +1,9 @@
 # RankMath SEO Webapp - URL Rewriting Rules
 # Automatically works in any directory!
 
+# Enable PATH_INFO for api.php
+AcceptPathInfo On
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     
@@ -11,8 +14,8 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     
-    # Don't rewrite API calls (ends with api.php)
-    RewriteCond %{REQUEST_URI} !api\.php$
+    # Don't rewrite API calls (contains api.php anywhere in the path)
+    RewriteCond %{REQUEST_URI} !api\.php
     
     # Don't rewrite PHP files
     RewriteCond %{REQUEST_URI} !\.php$

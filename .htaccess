@@ -1,12 +1,16 @@
 # RankMath SEO Webapp
 RewriteEngine On
 
+# Don't redirect webapp folder API calls
+RewriteCond %{REQUEST_URI} ^/rankmath/webapp/
+RewriteRule ^ - [L]
+
 # Redirect to install.php if not installed
-RewriteCond %{REQUEST_URI} !^/rankmathinstall.php
-RewriteCond %{REQUEST_URI} !^/rankmathinstall-handler.php
+RewriteCond %{REQUEST_URI} !^/rankmath/install\.php
+RewriteCond %{REQUEST_URI} !^/rankmath/install-handler\.php
 RewriteCond %{REQUEST_URI} !^/rankmath/assets/
-RewriteCond %{DOCUMENT_ROOT}/rankmathconfig/database.php !-f
-RewriteRule ^(.*)$ install.php [L]
+RewriteCond %{DOCUMENT_ROOT}/rankmath/config/database.php !-f
+RewriteRule ^(.*)$ /rankmath/install.php [L]
 
 # API Routes
 RewriteCond %{REQUEST_FILENAME} !-f

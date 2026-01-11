@@ -30,7 +30,7 @@ function getBaseUrl() {
     return $protocol . '://' . $host . $basePath;
 }
 
-// Get API base path
+// Get API base path (points to api.php for all API calls)
 function getApiBase() {
     return getBasePath() . '/api.php';
 }
