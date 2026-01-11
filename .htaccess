@@ -2,10 +2,10 @@
 RewriteEngine On
 
 # Redirect to install.php if not installed
-RewriteCond %{REQUEST_URI} !^/rankmath/webapp/install.php
-RewriteCond %{REQUEST_URI} !^/rankmath/webapp/install-handler.php
-RewriteCond %{REQUEST_URI} !^/rankmath/webapp/assets/
-RewriteCond %{DOCUMENT_ROOT}/rankmath/webapp/config/database.php !-f
+RewriteCond %{REQUEST_URI} !^/rankmathinstall.php
+RewriteCond %{REQUEST_URI} !^/rankmathinstall-handler.php
+RewriteCond %{REQUEST_URI} !^/rankmath/assets/
+RewriteCond %{DOCUMENT_ROOT}/rankmathconfig/database.php !-f
 RewriteRule ^(.*)$ install.php [L]
 
 # API Routes

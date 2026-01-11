@@ -1,0 +1,43 @@
+# RankMath SEO Webapp - URL Rewriting Rules
+# Automatically works in any directory!
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Auto-detect base - works in root or subdirectory
+    RewriteBase /rankmath/
+    
+    # Don't rewrite if it's a real file (CSS, JS, images, etc.)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Don't rewrite API calls (ends with api.php)
+    RewriteCond %{REQUEST_URI} !api\.php$
+    
+    # Don't rewrite PHP files
+    RewriteCond %{REQUEST_URI} !\.php$
+    
+    # Don't rewrite specific utility files
+    RewriteCond %{REQUEST_URI} !(test-api|check|install|install-handler|generate-sample-data)\.(php|html)$
+    
+    # Rewrite all other requests to index.php
+    RewriteRule ^(.*)$ index.php [L,QSA]
+</IfModule>
+
+# Enable compression for better performance
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Set proper MIME types
+<IfModule mod_mime.c>
+    AddType application/javascript js
+    AddType text/css css
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
