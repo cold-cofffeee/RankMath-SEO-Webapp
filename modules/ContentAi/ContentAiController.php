@@ -1,7 +1,7 @@
 <?php
 /**
  * Content AI Controller
- * AI-powered content generation assistant
+ * AI-powered content generation using Google Gemini
  */
 
 namespace RankMathWebapp\Modules\ContentAi;
@@ -12,13 +12,24 @@ use RankMathWebapp\Core\Response;
 class ContentAiController {
     
     private $db;
+    private $apiKeys;
+    private $geminiEndpoint;
+    private $geminiModel;
     
     public function __construct() {
         $this->db = Database::getInstance();
+        
+        // Load API keys securely
+        $apiKeysPath = dirname(dirname(__DIR__)) . '/config/api-keys.php';
+        if (file_exists($apiKeysPath)) {
+            $this->apiKeys = require $apiKeysPath;
+            $this->geminiEndpoint = $this->apiKeys['gemini']['endpoint'] ?? '';
+            $this->geminiModel = $this->apiKeys['gemini']['model'] ?? 'gemini-2.0-flash-exp';
+        }
     }
     
     /**
-     * Generate content suggestions
+     * Generate content suggestions using Gemini AI
      */
     public function generateContent($params) {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -32,8 +43,16 @@ class ContentAiController {
             Response::error('Keyword is required');
         }
         
-        // Generate content based on type
-        $generatedContent = $this->generateByType($keyword, $contentType, $tone);
+        // Check if API key is configured
+        if (empty($this->apiKeys['gemini']['api_key'])) {
+            // Fallback to templates if no API key
+            $generatedContent = $this->generateByTemplate($keyword, $contentType, $tone);
+            $isRealAI = false;
+        } else {
+            // Use real Gemini AI
+            $generatedContent = $this->generateWithGemini($keyword, $contentType, $tone);
+            $isRealAI = true;
+        }
         
         // Store in history
         $contentId = $this->db->insert('content_ai', [
@@ -42,7 +61,7 @@ class ContentAiController {
             'content_type' => $contentType,
             'prompt' => $data['prompt'] ?? null,
             'generated_content' => $generatedContent,
-            'credits_used' => 1,
+            'credits_used' => $isRealAI ? 1 : 0,
         ]);
         
         Response::success('Content generated', [
@@ -50,7 +69,96 @@ class ContentAiController {
             'content' => $generatedContent,
             'keyword' => $keyword,
             'content_type' => $contentType,
+            'powered_by' => $isRealAI ? 'Google Gemini AI' : 'Templates',
         ]);
+    }
+    
+    /**
+     * Generate content using real Gemini AI
+     */
+    private function generateWithGemini($keyword, $contentType, $tone) {
+        $apiKey = $this->apiKeys['gemini']['api_key'];
+        $url = $this->geminiEndpoint . '/' . $this->geminiModel . ':generateContent?key=' . $apiKey;
+        
+        // Build prompt based on content type
+        $prompt = $this->buildGeminiPrompt($keyword, $contentType, $tone);
+        
+        $requestData = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.7,
+                'maxOutputTokens' => 500,
+            ]
+        ];
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestData));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode !== 200) {
+            // Fallback to templates on error
+            error_log("Gemini API Error: HTTP $httpCode - $response");
+            return $this->generateByTemplate($keyword, $contentType, $tone);
+        }
+        
+        $result = json_decode($response, true);
+        
+        // Extract generated text from Gemini response
+        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+            return trim($result['candidates'][0]['content']['parts'][0]['text']);
+        }
+        
+        // Fallback if parsing fails
+        return $this->generateByTemplate($keyword, $contentType, $tone);
+    }
+    
+    /**
+     * Build appropriate prompt for Gemini based on content type
+     */
+    private function buildGeminiPrompt($keyword, $contentType, $tone) {
+        $toneDesc = match($tone) {
+            'professional' => 'professional and authoritative',
+            'casual' => 'casual and conversational',
+            'friendly' => 'friendly and engaging',
+            'formal' => 'formal and academic',
+            default => 'professional'
+        };
+        
+        $prompts = [
+            'title' => "Generate a compelling SEO-optimized title about '$keyword'. Make it engaging, under 60 characters, and use a $toneDesc tone. Return ONLY the title, nothing else.",
+            
+            'paragraph' => "Write a well-structured, informative paragraph about '$keyword' in a $toneDesc tone. Focus on providing value and be SEO-friendly. Around 150-200 words.",
+            
+            'meta_description' => "Create an SEO-optimized meta description for '$keyword'. Make it compelling, action-oriented, and between 120-160 characters. Include a call to action. Return ONLY the meta description.",
+            
+            'heading' => "Generate a clear, SEO-optimized H2 or H3 heading about '$keyword' in a $toneDesc tone. Make it informative and engaging. Return ONLY the heading.",
+            
+            'conclusion' => "Write a compelling conclusion paragraph about '$keyword' in a $toneDesc tone. Summarize key points and include a call to action. Around 100-150 words.",
+        ];
+        
+        return $prompts[$contentType] ?? $prompts['paragraph'];
+    }
+    
+    /**
+     * Fallback: Generate with templates (when API key not configured)
+     */
+    private function generateByTemplate($keyword, $contentType, $tone) {
+        return $this->generateByType($keyword, $contentType, $tone);
     }
     
     /**
@@ -121,7 +229,7 @@ class ContentAiController {
     }
     
     /**
-     * Keyword research
+     * Keyword research using real data from Search Console or database
      */
     public function researchKeyword($params) {
         $keyword = $_GET['keyword'] ?? '';
@@ -130,17 +238,123 @@ class ContentAiController {
             Response::error('Keyword is required');
         }
         
+        // Get real keyword data from database (from tracked analytics)
+        $keywordData = $this->getRealKeywordData($keyword);
+        
         $research = [
             'keyword' => $keyword,
-            'related_keywords' => $this->getRelatedKeywords($keyword),
+            'related_keywords' => $this->getRelatedKeywordsFromDB($keyword),
             'long_tail_keywords' => $this->getLongTailKeywords($keyword),
             'questions' => $this->getQuestions($keyword),
-            'search_volume' => rand(100, 10000), // Simulated
-            'difficulty' => rand(20, 80), // Simulated
-            'cpc' => number_format(rand(50, 500) / 100, 2), // Simulated
+            'search_volume' => $keywordData['impressions'] ?? 0,
+            'clicks' => $keywordData['clicks'] ?? 0,
+            'position' => $keywordData['position'] ?? 0,
+            'ctr' => $keywordData['ctr'] ?? 0,
+            'data_source' => $keywordData['source'] ?? 'Database',
+            'date_range' => '30 days',
         ];
         
         Response::success('Keyword research complete', $research);
+    }
+    
+    /**
+     * Get real keyword data from analytics database
+     */
+    private function getRealKeywordData($keyword) {
+        $prefix = $this->db->getPrefix();
+        
+        // Try exact match first
+        $sql = "SELECT 
+                    SUM(impressions) as total_impressions,
+                    SUM(clicks) as total_clicks,
+                    AVG(position) as avg_position,
+                    AVG(ctr) as avg_ctr
+                FROM {$prefix}analytics_keywords
+                WHERE keyword = :keyword
+                AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        
+        $data = $this->db->fetchOne($sql, ['keyword' => $keyword]);
+        
+        if ($data && $data['total_impressions'] > 0) {
+            return [
+                'impressions' => (int)$data['total_impressions'],
+                'clicks' => (int)$data['total_clicks'],
+                'position' => round($data['avg_position'], 1),
+                'ctr' => round($data['avg_ctr'], 2),
+                'source' => 'Analytics Database (Real Data)'
+            ];
+        }
+        
+        // Try partial match
+        $sql = "SELECT 
+                    SUM(impressions) as total_impressions,
+                    SUM(clicks) as total_clicks,
+                    AVG(position) as avg_position,
+                    AVG(ctr) as avg_ctr
+                FROM {$prefix}analytics_keywords
+                WHERE keyword LIKE :keyword
+                AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                LIMIT 1";
+        
+        $data = $this->db->fetchOne($sql, ['keyword' => '%' . $keyword . '%']);
+        
+        if ($data && $data['total_impressions'] > 0) {
+            return [
+                'impressions' => (int)$data['total_impressions'],
+                'clicks' => (int)$data['total_clicks'],
+                'position' => round($data['avg_position'], 1),
+                'ctr' => round($data['avg_ctr'], 2),
+                'source' => 'Similar Keywords (Real Data)'
+            ];
+        }
+        
+        // No data found
+        return [
+            'impressions' => 0,
+            'clicks' => 0,
+            'position' => 0,
+            'ctr' => 0,
+            'source' => 'No Data Available (Add to Analytics)'
+        ];
+    }
+    
+    /**
+     * Get related keywords from database based on actual analytics
+     */
+    private function getRelatedKeywordsFromDB($keyword) {
+        $prefix = $this->db->getPrefix();
+        
+        // Find keywords that contain the main keyword or are similar
+        $sql = "SELECT DISTINCT keyword, 
+                       SUM(impressions) as total_impressions
+                FROM {$prefix}analytics_keywords
+                WHERE (keyword LIKE :keyword1 OR keyword LIKE :keyword2)
+                AND keyword != :exact_keyword
+                AND date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY keyword
+                ORDER BY total_impressions DESC
+                LIMIT 10";
+        
+        $results = $this->db->fetchAll($sql, [
+            'keyword1' => '%' . $keyword . '%',
+            'keyword2' => $keyword . '%',
+            'exact_keyword' => $keyword
+        ]);
+        
+        $relatedKeywords = array_column($results, 'keyword');
+        
+        // If no real data, generate suggestions
+        if (empty($relatedKeywords)) {
+            $relatedKeywords = [
+                $keyword . " tips",
+                $keyword . " guide",
+                "best " . $keyword,
+                $keyword . " tutorial",
+                "how to " . $keyword,
+            ];
+        }
+        
+        return $relatedKeywords;
     }
     
     private function generateByType($keyword, $type, $tone) {
